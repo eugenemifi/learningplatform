@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: lp-postgres
+    environment:
+      POSTGRES_DB: learning_platform
+      POSTGRES_USER: lp_user
+      POSTGRES_PASSWORD: lp_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - lp-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lp_user -d learning_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: lp-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: learning_platform
+      DB_USER: lp_user
+      DB_PASSWORD: lp_password
+      SPRING_PROFILES_ACTIVE: dev
+    ports:
+      - "8080:8080"
+
+volumes:
+  lp-db-data:
