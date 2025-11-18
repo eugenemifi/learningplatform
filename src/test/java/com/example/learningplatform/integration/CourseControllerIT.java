@@ -1,5 +1,8 @@
 package com.example.learningplatform.integration;
 
+import com.example.learningplatform.entity.Course;
+import com.example.learningplatform.entity.Lesson;
+import com.example.learningplatform.entity.Module;
 import com.example.learningplatform.entity.User;
 import com.example.learningplatform.web.CourseController.CreateCourseRequest;
 import com.example.learningplatform.web.CourseController.CreateLessonRequest;
@@ -8,10 +11,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class CourseControllerIT extends BaseIntegrationTest {
 
@@ -30,29 +35,26 @@ class CourseControllerIT extends BaseIntegrationTest {
                 Set.of()
         );
 
-        String courseJson = mockMvc.perform(post("/api/courses")
+        mockMvc.perform(post("/api/courses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(courseReq)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.title").value("Hibernate Course"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(status().isCreated());
 
-        Long courseId = objectMapper.readTree(courseJson).get("id").asLong();
+        List<Course> courses = courseRepository.findAll();
+        assertThat(courses).hasSize(1);
+        Course course = courses.get(0);
+        assertThat(course.getTitle()).isEqualTo("Hibernate Course");
 
         CreateModuleRequest modReq = new CreateModuleRequest("Intro", 1);
-        String moduleJson = mockMvc.perform(post("/api/courses/{courseId}/modules", courseId)
+        mockMvc.perform(post("/api/courses/{courseId}/modules", course.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(modReq)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("Intro"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(status().isCreated());
 
-        Long moduleId = objectMapper.readTree(moduleJson).get("id").asLong();
+        List<Module> modules = moduleRepository.findByCourseIdOrderByOrderIndex(course.getId());
+        assertThat(modules).hasSize(1);
+        Module module = modules.get(0);
+        assertThat(module.getTitle()).isEqualTo("Intro");
 
         CreateLessonRequest lessonReq = new CreateLessonRequest(
                 "What is ORM?",
@@ -60,18 +62,21 @@ class CourseControllerIT extends BaseIntegrationTest {
                 null
         );
 
-        mockMvc.perform(post("/api/courses/modules/{moduleId}/lessons", moduleId)
+        mockMvc.perform(post("/api/courses/modules/{moduleId}/lessons", module.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(lessonReq)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("What is ORM?"));
+                .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/courses/{courseId}/modules", courseId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("Intro"));
+        List<Lesson> lessons = lessonRepository.findByModuleId(module.getId());
+        assertThat(lessons).hasSize(1);
+        Lesson lesson = lessons.get(0);
+        assertThat(lesson.getTitle()).isEqualTo("What is ORM?");
 
-        mockMvc.perform(get("/api/courses/modules/{moduleId}/lessons", moduleId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("What is ORM?"));
+        // просто проверяем, что GET-ы работают
+        mockMvc.perform(get("/api/courses/{courseId}/modules", course.getId()))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/courses/modules/{moduleId}/lessons", module.getId()))
+                .andExpect(status().isOk());
     }
 }

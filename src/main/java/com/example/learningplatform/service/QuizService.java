@@ -37,8 +37,8 @@ public class QuizService {
 
     @Transactional
     public Question addQuestion(Long quizId,
-                                String text,
                                 Type type,
+                                String text,
                                 List<AnswerOptionData> options) {
 
         Quiz quiz = quizRepository.findById(quizId)

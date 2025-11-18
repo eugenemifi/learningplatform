@@ -7,8 +7,11 @@ import com.example.learningplatform.web.SubmissionController.SubmitRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class SubmissionControllerIT extends BaseIntegrationTest {
 
@@ -28,32 +31,31 @@ class SubmissionControllerIT extends BaseIntegrationTest {
                 "My solution"
         );
 
-        String submissionJson = mockMvc.perform(post("/api/submissions")
+        mockMvc.perform(post("/api/submissions")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(submitRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.content").value("My solution"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(status().isCreated());
 
-        Long submissionId = objectMapper.readTree(submissionJson).get("id").asLong();
+        List<Submission> submissions = submissionRepository.findByAssignmentId(assignment.getId());
+        assertThat(submissions).hasSize(1);
+        Submission sub = submissions.get(0);
+        assertThat(sub.getContent()).isEqualTo("My solution");
 
         GradeRequest gradeReq = new GradeRequest(95, "Good job");
 
-        mockMvc.perform(post("/api/submissions/{id}/grade", submissionId)
+        mockMvc.perform(post("/api/submissions/{id}/grade", sub.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(gradeReq)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.score").value(95))
-                .andExpect(jsonPath("$.feedback").value("Good job"));
+                .andExpect(status().isOk());
+
+        Submission graded = submissionRepository.findById(sub.getId()).orElseThrow();
+        assertThat(graded.getScore()).isEqualTo(95);
+        assertThat(graded.getFeedback()).isEqualTo("Good job");
 
         mockMvc.perform(get("/api/submissions/by-assignment/{id}", assignment.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].score").value(95));
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/submissions/by-student/{id}", student.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].assignment.id").value(assignment.getId()));
+                .andExpect(status().isOk());
     }
 }

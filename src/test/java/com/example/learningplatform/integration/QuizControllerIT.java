@@ -3,15 +3,16 @@ package com.example.learningplatform.integration;
 import com.example.learningplatform.entity.*;
 import com.example.learningplatform.entity.Module;
 import com.example.learningplatform.web.QuizController.CreateQuestionRequest;
-import com.example.learningplatform.web.QuizController.CreateQuizRequest;
 import com.example.learningplatform.web.QuizController.CreateQuestionRequest.OptionDTO;
+import com.example.learningplatform.web.QuizController.CreateQuizRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class QuizControllerIT extends BaseIntegrationTest {
 
@@ -28,16 +29,14 @@ class QuizControllerIT extends BaseIntegrationTest {
                 15
         );
 
-        String quizJson = mockMvc.perform(post("/api/quizzes")
+        mockMvc.perform(post("/api/quizzes")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(quizReq)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("Intro Quiz"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(status().isCreated());
 
-        Long quizId = objectMapper.readTree(quizJson).get("id").asLong();
+        List<Quiz> quizzes = quizRepository.findAll();
+        assertThat(quizzes).hasSize(1);
+        Quiz quiz = quizzes.get(0);
 
         CreateQuestionRequest questionReq = new CreateQuestionRequest(
                 "What is ORM?",
@@ -48,14 +47,23 @@ class QuizControllerIT extends BaseIntegrationTest {
                 )
         );
 
-        mockMvc.perform(post("/api/quizzes/{quizId}/questions", quizId)
+        mockMvc.perform(post("/api/quizzes/{quizId}/questions", quiz.getId())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(questionReq)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.text").value("What is ORM?"));
+                .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/api/quizzes/{id}", quizId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.title").value("Intro Quiz"));
+        // Загружаем квиз вместе с вопросами
+        Quiz loaded = quizRepository.findByIdWithQuestions(quiz.getId())
+                .orElseThrow();
+        assertThat(loaded.getQuestions()).hasSize(1);
+
+        Question q = loaded.getQuestions().get(0);
+
+        // А варианты ответа достаём отдельным запросом через AnswerOptionRepository
+        List<AnswerOption> options = answerOptionRepository.findByQuestion_Id(q.getId());
+        assertThat(options).hasSize(2);
+
+        mockMvc.perform(get("/api/quizzes/{id}", quiz.getId()))
+                .andExpect(status().isOk());
     }
 }

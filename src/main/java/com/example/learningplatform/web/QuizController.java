@@ -38,8 +38,8 @@ public class QuizController {
 
         return quizService.addQuestion(
                 quizId,
-                request.text(),
                 request.type(),
+                request.text(),
                 options
         );
     }

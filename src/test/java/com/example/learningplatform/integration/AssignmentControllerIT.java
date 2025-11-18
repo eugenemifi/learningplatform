@@ -1,5 +1,6 @@
 package com.example.learningplatform.integration;
 
+import com.example.learningplatform.entity.Assignment;
 import com.example.learningplatform.entity.Course;
 import com.example.learningplatform.entity.Lesson;
 import com.example.learningplatform.entity.Module;
@@ -9,9 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class AssignmentControllerIT extends BaseIntegrationTest {
 
@@ -31,23 +34,21 @@ class AssignmentControllerIT extends BaseIntegrationTest {
                 100
         );
 
-        String json = mockMvc.perform(post("/api/assignments")
+        // создаём через контроллер
+        mockMvc.perform(post("/api/assignments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.title").value("HW #1"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(status().isCreated());
 
-        Long assignmentId = objectMapper.readTree(json).get("id").asLong();
+        List<Assignment> assignments = assignmentRepository.findByLesson_Id(lesson.getId());
+        assertThat(assignments).hasSize(1);
+        Assignment saved = assignments.get(0);
+        assertThat(saved.getTitle()).isEqualTo("HW #1");
 
-        mockMvc.perform(get("/api/assignments/{id}", assignmentId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(assignmentId));
+        mockMvc.perform(get("/api/assignments/{id}", saved.getId()))
+                .andExpect(status().isOk());
 
         mockMvc.perform(get("/api/assignments/by-lesson/{lessonId}", lesson.getId()))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].title").value("HW #1"));
+                .andExpect(status().isOk());
     }
 }

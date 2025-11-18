@@ -9,20 +9,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 public abstract class BaseIntegrationTest {
+
     @Autowired protected MockMvc mockMvc;
     @Autowired protected ObjectMapper objectMapper;
 
@@ -123,6 +120,10 @@ public abstract class BaseIntegrationTest {
         return assignmentRepository.save(a);
     }
 
+    /**
+     * Создаёт квиз с одним вопросом и двумя вариантами.
+     * Возвращает квиз уже с заполненным списком questions.
+     */
     protected Quiz createQuiz(Module module) {
         Quiz q = Quiz.builder()
                 .module(module)
@@ -151,6 +152,10 @@ public abstract class BaseIntegrationTest {
         answerOptionRepository.save(opt1);
         answerOptionRepository.save(opt2);
 
-        return q;
+        question.setOptions(List.of(opt1, opt2));
+        q.setQuestions(List.of(question));
+
+        questionRepository.save(question);
+        return quizRepository.save(q);
     }
 }
