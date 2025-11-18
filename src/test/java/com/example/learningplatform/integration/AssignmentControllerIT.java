@@ -34,7 +34,6 @@ class AssignmentControllerIT extends BaseIntegrationTest {
                 100
         );
 
-        // создаём через контроллер
         mockMvc.perform(post("/api/assignments")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))

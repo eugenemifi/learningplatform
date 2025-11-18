@@ -52,14 +52,12 @@ class QuizControllerIT extends BaseIntegrationTest {
                         .content(objectMapper.writeValueAsString(questionReq)))
                 .andExpect(status().isCreated());
 
-        // Загружаем квиз вместе с вопросами
         Quiz loaded = quizRepository.findByIdWithQuestions(quiz.getId())
                 .orElseThrow();
         assertThat(loaded.getQuestions()).hasSize(1);
 
         Question q = loaded.getQuestions().get(0);
 
-        // А варианты ответа достаём отдельным запросом через AnswerOptionRepository
         List<AnswerOption> options = answerOptionRepository.findByQuestion_Id(q.getId());
         assertThat(options).hasSize(2);
 

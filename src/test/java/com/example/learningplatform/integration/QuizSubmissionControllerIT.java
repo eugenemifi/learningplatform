@@ -21,10 +21,9 @@ class QuizSubmissionControllerIT extends BaseIntegrationTest {
         var category = createCategory("Programming");
         Course course = createCourse(teacher, category);
         Module module = createModule(course, "Intro", 1);
-        Quiz quiz = createQuiz(module); // helper создаёт вопрос + варианты
+        Quiz quiz = createQuiz(module);
 
         Question question = quiz.getQuestions().get(0);
-        // безопасно берём правильный вариант из БД
         List<AnswerOption> allOptions = answerOptionRepository.findAll();
         Long correctOptionId = allOptions.stream()
                 .filter(o -> o.getQuestion().getId().equals(question.getId()) && o.isCorrect())

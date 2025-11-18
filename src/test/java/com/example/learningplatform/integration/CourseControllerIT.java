@@ -72,7 +72,6 @@ class CourseControllerIT extends BaseIntegrationTest {
         Lesson lesson = lessons.get(0);
         assertThat(lesson.getTitle()).isEqualTo("What is ORM?");
 
-        // просто проверяем, что GET-ы работают
         mockMvc.perform(get("/api/courses/{courseId}/modules", course.getId()))
                 .andExpect(status().isOk());
 
